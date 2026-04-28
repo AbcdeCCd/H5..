@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>7号楼·平凡人的责任</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+    .container {
+      max-width: 640px; margin: 0 auto; position: relative;
+      width: 100%; height: 100vh; overflow: hidden;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed; top: 0; left: 0; height: 3px; z-index: 999;
+      background: linear-gradient(90deg, #c8a050, #e8c870);
+      transition: width 0.6s ease;
+    }
+
+    /* Scene base */
+    .scene {
+      width: 100%; aspect-ratio: 640/1040; position: relative;
+      overflow: hidden; background: #000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.8s ease;
+      position: absolute; top: 0; left: 0;
+    }
+    .scene.active {
+      opacity: 1; pointer-events: auto;
+    }
+
+    .layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .layer img {
+      position: absolute; display: block; max-width: none;
+    }
+
+    /* Click overlay - always on top, transparent, reliable */
+    .click-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 100; cursor: pointer;
+    }
+    .click-overlay.hidden { display: none; }
+
+    /* Finger bounce animation */
+    @keyframes fingerBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    .finger-anim { animation: fingerBounce 1.2s ease-in-out infinite; }
+
+    /* Click hint blink */
+    @keyframes hintBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .hint-blink { animation: hintBlink 1.2s ease-in-out infinite; }
+
+    /* Cover tree open animation */
+    .tree-left { transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .tree-left.open { transform: translateX(-100%); }
+    .tree-right { transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .tree-right.open { transform: translateX(100%); }
+
+    /* Cover black mask fade */
+    .cover-mask { transition: opacity 1.5s ease; }
+    .cover-mask.fade { opacity: 0; }
+
+    /* Mask overlay for interior dark scenes */
+    .mask-overlay {
+      transition: opacity 1s ease;
+    }
+    .mask-overlay.fade { opacity: 0; pointer-events: none; }
+
+    /* Responsibility card slide in from right */
+    @keyframes cardSlideRight {
+      0% { transform: translateX(100%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    /* Responsibility card slide in from left */
+    @keyframes cardSlideLeft {
+      0% { transform: translateX(-100%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    .card-slide-right { animation: cardSlideRight 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    .card-slide-left { animation: cardSlideLeft 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    /* Baby crib rocking */
+    @keyframes cribRock {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    .crib-rock { animation: cribRock 2s ease-in-out infinite; transform-origin: center bottom; }
+
+    /* Arm breathing rotation */
+    @keyframes armBreath {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    .arm-breath { animation: armBreath 3s ease-in-out infinite; }
+
+    /* Phone shake */
+    @keyframes phoneShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+    .phone-shake { animation: phoneShake 0.1s linear infinite; }
+
+    /* Cat tail swing */
+    @keyframes catTail {
+      0%, 100% { transform: rotate(-15deg); }
+      50% { transform: rotate(15deg); }
+    }
+
+    /* Light glow pulse */
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .glow-pulse { animation: glowPulse 2s ease-in-out infinite; }
+
+    /* Window glow pulse for clickable windows */
+    @keyframes windowGlow {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+    .window-glow { animation: windowGlow 2s ease-in-out infinite; }
+
+    /* Bubble text appear */
+    @keyframes bubbleAppear {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .bubble-appear { animation: bubbleAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    /* Scene title hidden */
+    .scene-title { display: none; }
+
+    /* Arrow pulse */
+    @keyframes arrowPulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .arrow-pulse { animation: arrowPulse 2s ease-in-out infinite; }
+
+    /* Ending scene */
+    .ending-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 50;
+    }
+    .ending-title {
+      color: #fff; font-size: 28px; font-weight: bold;
+      text-shadow: 0 0 20px rgba(200,160,80,0.5);
+      margin-bottom: 10px; opacity: 0;
+      animation: fadeInUp 1s ease 0.3s forwards;
+    }
+    .ending-subtitle {
+      color: rgba(255,255,255,0.6); font-size: 14px;
+      margin-bottom: 30px; opacity: 0;
+      animation: fadeInUp 1s ease 0.6s forwards;
+    }
+    .poster-btn {
+      background: linear-gradient(135deg, #c8a050, #a08030);
+      color: #fff; border: none; padding: 14px 36px;
+      border-radius: 30px; font-size: 16px; cursor: pointer;
+      letter-spacing: 0.1em;
+      box-shadow: 0 4px 15px rgba(160,128,48,0.4);
+      opacity: 0; animation: fadeInUp 1s ease 1s forwards;
+    }
+    .poster-btn:active { transform: scale(0.95); }
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========== NEW ANIMATIONS ========== */
+    /* 1. Cloud / canopy gentle sway */
+    @keyframes cloudSway {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(10px); }
+    }
+    .cloud-sway { animation: cloudSway 3s ease-in-out infinite; }
+
+    /* 2. Father stirring milk powder (small circular motion around elbow) */
+    @keyframes stirMotion {
+      0% { transform: rotate(0deg) translateX(0); }
+      25% { transform: rotate(3deg) translateX(2px); }
+      50% { transform: rotate(0deg) translateX(4px); }
+      75% { transform: rotate(-3deg) translateX(2px); }
+      100% { transform: rotate(0deg) translateX(0); }
+    }
+    .stir-motion { animation: stirMotion 1.5s ease-in-out infinite; transform-origin: 80% 20%; }
+
+    /* 3. Mother cradling baby (gentle arc) */
+    @keyframes cradleRock {
+      0%, 100% { transform: rotate(0deg) translateY(0); }
+      33% { transform: rotate(2deg) translateY(-2px); }
+      66% { transform: rotate(-1deg) translateY(0); }
+    }
+    .cradle-rock { animation: cradleRock 2.5s ease-in-out infinite; transform-origin: 70% 10%; }
+
+    /* 4. Cleaner body breathing sway */
+    @keyframes bodyBreath {
+      0%, 100% { transform: scale(1) translateY(0); }
+      50% { transform: scale(1.005) translateY(-1px); }
+    }
+    .body-breath { animation: bodyBreath 2s ease-in-out infinite; transform-origin: center bottom; }
+
+    /* 5. Clothes hanging sway (pivot from hook) */
+    @keyframes clothesSway {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(4deg); }
+    }
+    .clothes-sway { animation: clothesSway 2s ease-in-out infinite; transform-origin: 50% 0; }
+
+    /* 6. Plants elastic swing */
+    @keyframes plantSwing {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(6deg); }
+      50% { transform: rotate(0deg); }
+      75% { transform: rotate(-4deg); }
+    }
+    .plant-swing { animation: plantSwing 2.5s ease-in-out infinite; transform-origin: 50% 100%; }
+    .plant-swing-fast { animation: plantSwing 1.2s ease-in-out infinite; transform-origin: 50% 100%; }
+
+    /* 7. Hand extend for trash handover */
+    @keyframes handExtend {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(15px); }
+    }
+    .hand-extend { animation: handExtend 2s ease-in-out infinite; }
+
+    /* 8. Boy pushing toy back-and-forth */
+    @keyframes toyPush {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(12px); }
+    }
+    .toy-push { animation: toyPush 1s ease-in-out infinite; }
+
+    /* 9. Phone holding slight sway */
+    @keyframes phoneHold {
+      0%, 100% { transform: rotate(0deg) translateY(0); }
+      33% { transform: rotate(1deg) translateY(-1px); }
+      66% { transform: rotate(-1deg) translateY(1px); }
+    }
+    .phone-hold { animation: phoneHold 2s ease-in-out infinite; }
+
+    /* 10. Salute / wave */
+    @keyframes salute {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-8deg); }
+    }
+    .salute { animation: salute 1.5s ease-in-out infinite; transform-origin: 80% 90%; }
+
+    /* 11. Bag bobbing */
+    @keyframes bagBob {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(3px) rotate(1deg); }
+    }
+    .bag-bob { animation: bagBob 2s ease-in-out infinite; }
+    .bag-bob-strong { animation: bagBob 0.8s ease-in-out infinite; }
+
+    /* 12. Braids swinging */
+    @keyframes braidSwingLeft {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(6deg); }
+    }
+    @keyframes braidSwingRight {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-6deg); }
+    }
+    .braid-left { animation: braidSwingLeft 1.5s ease-in-out infinite; transform-origin: 80% 0; }
+    .braid-right { animation: braidSwingRight 1.5s ease-in-out infinite; transform-origin: 20% 0; }
+    .braid-left-fast { animation: braidSwingLeft 0.6s ease-in-out infinite; transform-origin: 80% 0; }
+    .braid-right-fast { animation: braidSwingRight 0.6s ease-in-out infinite; transform-origin: 20% 0; }
+
+    /* 13. Knock arm */
+    @keyframes knockArm {
+      0%, 100% { transform: rotate(0deg); }
+      30% { transform: rotate(-15deg); }
+      60% { transform: rotate(0deg); }
+      80% { transform: rotate(-10deg); }
+    }
+    .knock-arm { animation: knockArm 1s ease-in-out; transform-origin: 10% 90%; }
+
+    /* 14. Arms open */
+    @keyframes armsOpen {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-20deg); }
+    }
+    .arms-open-action { animation: armsOpen 0.6s ease-out forwards; transform-origin: 90% 90%; }
+
+    /* 15. Shiver / tremble */
+    @keyframes shiver {
+      0%, 100% { transform: translateX(0) translateY(0); }
+      25% { transform: translateX(-1px) translateY(1px); }
+      50% { transform: translateX(1px) translateY(0); }
+      75% { transform: translateX(0) translateY(-1px); }
+    }
+    .shiver { animation: shiver 0.3s linear infinite; }
+
+    /* 16. Wipe sweat */
+    @keyframes wipeSweat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-3px) rotate(3deg); }
+      50% { transform: translateY(0) rotate(0deg); }
+      75% { transform: translateY(-2px) rotate(-2deg); }
+    }
+    .wipe-sweat { animation: wipeSweat 1.2s ease-in-out infinite; transform-origin: 20% 80%; }
+
+    /* 17. Hand water pass */
+    @keyframes handWater {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(8px); }
+    }
+    .hand-water { animation: handWater 2s ease-in-out infinite; }
+
+    /* Poster result */
+    .poster-result {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+      z-index: 1000; display: none; align-items: center;
+      justify-content: center; flex-direction: column;
+    }
+    .poster-result.show { display: flex; }
+    .poster-canvas { max-width: 90%; max-height: 70%; border-radius: 8px; box-shadow: 0 0 30px rgba(255,200,100,0.3); }
+    .poster-actions { margin-top: 16px; display: flex; gap: 16px; }
+    .poster-action-btn {
+      color: #fff; font-size: 14px;
+      background: rgba(255,255,255,0.15);
+      padding: 8px 24px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.3); cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  <div class="container">
+
+    <!-- Scene 1: Cover -->
+    <div class='scene active' id='scene-1'>
+      <div class='layer'><img src='assets/11d45af8d9cfa5accaec8361f8616d32abd9c516.png' alt='背景' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer tree-left' id='tree1'><img src='assets/db95e696daf83d7db2d6788fd6e2268f5ea7c1e9.png' alt='树木1' style='left:-16px;top:849px;width:595px;height:214px;'></div>
+      <div class='layer tree-right' id='tree2'><img src='assets/3d7c4f832c73783aac1aa9be00e8cd149504816a.png' alt='树木2' style='left:242px;top:643px;width:571px;height:412px;'></div>
+      <div class='layer cover-mask' id='coverMask'><img src='assets/6503c958a51de27ea1037d134d80b04282be71a6.png' alt='黑' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/3e0f0e57018f78f86c151c7f2500b6dac587f306.png' alt='7号' style='left:27px;top:181px;width:348px;height:832px;'></div>
+      <div class='layer'><img class='finger-anim' id='coverFinger' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指' style='left:259px;top:643px;width:46px;height:65px;'></div>
+      <div class='click-overlay' id='click1'></div>
+      <div class='scene-title'>画板 1</div>
+    </div>
+
+    <!-- Scene 2: Exterior - Night (婴儿) -->
+    <div class='scene' id='scene-2'>
+      <div class='layer'><img src='assets/62bfed703f0d37bae836f088874203152762119a.png' alt='图层 1' style='left:-750px;top:0px;width:1744px;height:1040px;'></div>
+      <div class='layer'><img src='assets/57c5f3cb5a09a2010a5e2d2766e77007235e18e6.png' alt='FsUwh2Tl' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='cloud-sway' src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:17px;top:29px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/7ba15f6f8b8de6da757c43e7cd14fd852ca9372f.png' alt='月亮' style='left:91px;top:17px;width:106px;height:107px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer' id='bubble1' style='opacity:0'><img src='assets/0bbb28dc231fb115b103823bc31e46cae7952a13.png' alt='哇哇' style='left:25px;top:283px;width:187px;height:62px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer' id='finger1'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:121px;top:391px;width:46px;height:65px;'></div>
+      <div class='click-overlay' id='click2'></div>
+      <div class='scene-title'>画板 2</div>
+    </div>
+
+    <!-- Scene 3: Interior - Bedroom Dark (婴儿 暗态) -->
+    <div class='scene' id='scene-3'>
+      <div class='layer'><img src='assets/2cae502eb6a9578327bec61658acfeb9bc21377f.png' alt='房间' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/4fc9355231f0c2a546adf109f04b3a2ab7cf1e1b.png' alt='双人床' style='left:311px;top:295px;width:329px;height:745px;'></div>
+      <div class='layer'><img src='assets/654c541079291c87ef956e61a45afbf7e1a151f5.png' alt='飘动窗帘' style='left:0px;top:0px;width:110px;height:626px;'></div>
+      <div class='layer'><img src='assets/ca0f698e878bc77384fc2a63026a512ab1d94311.png' alt='桌子' style='left:0px;top:860px;width:271px;height:180px;'></div>
+      <div class='layer'><img src='assets/82aaffaa4555dff85218c39bb5c7eb8a1c12b2f6.png' alt='落地灯' style='left:132px;top:126px;width:161px;height:372px;'></div>
+      <div class='layer'><img class='crib-rock' src='assets/37af9f97cb4db971d477d4a53864b51c0bdb7267.png' alt='婴儿床' style='left:72px;top:316px;width:404px;height:569px;'></div>
+      <div class='layer'><img class='arm-breath' src='assets/40f859b1c73c8074a4d5855a2359d801e3df55bd.png' alt='妈妈头部' style='left:500px;top:413px;width:118px;height:177px;'></div>
+      <div class='layer'><img class='arm-breath' src='assets/c9648081f914ac7b32fc3fc155c1b85f6f5af506.png' alt='妈妈手部' style='left:311px;top:535px;width:172px;height:68px;'></div>
+      <div class='layer'><img src='assets/f9830e37711a88120048d62fcac04663c1e7b669.png' alt='妈妈身体' style='left:436px;top:461px;width:137px;height:210px;'></div>
+      <div class='layer'><img src='assets/ba4b41542d7b5ad25468c5f1ac34087ac8c4f9a1.png' alt='爸爸身体' style='left:565px;top:413px;width:96px;height:243px;'></div>
+      <div class='layer'><img class='arm-breath' src='assets/b44d23dc01ce9a1c9b2a61dbbc79dd9f01aa9ba4.png' alt='爸爸手部' style='left:453px;top:526px;width:168px;height:102px;'></div>
+      <div class='layer'><img src='assets/557a8c5de4e082da97ba8426a6c3005729c357f0.png' alt='被子' style='left:310px;top:634px;width:334px;height:476px;'></div>
+      <div class='layer mask-overlay' id='mask3'><img src='assets/b535bb61627a57fa31839be9ba5c9c8c595320db.png' alt='遮罩' style='left:0px;top:1px;width:640px;height:1039px;'></div>
+      <div class='layer hint-blink' id='hint3'><img src='assets/bf041d8c7902384ebd6e3b528a91731260398601.png' alt='点击' style='left:282px;top:51px;width:172px;height:122px;'></div>
+      <div class='click-overlay' id='click3'></div>
+      <div class='scene-title'>画板 3</div>
+    </div>
+
+    <!-- Scene 4: Interior - Bedroom Bright (婴儿 亮态) -->
+    <div class='scene' id='scene-4'>
+      <div class='layer'><img src='assets/2cae502eb6a9578327bec61658acfeb9bc21377f.png' alt='房间' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/4fc9355231f0c2a546adf109f04b3a2ab7cf1e1b.png' alt='双人床' style='left:311px;top:295px;width:329px;height:745px;'></div>
+      <div class='layer'><img src='assets/654c541079291c87ef956e61a45afbf7e1a151f5.png' alt='飘动窗帘' style='left:0px;top:0px;width:110px;height:626px;'></div>
+      <div class='layer'><img src='assets/82aaffaa4555dff85218c39bb5c7eb8a1c12b2f6.png' alt='落地灯' style='left:132px;top:126px;width:161px;height:372px;'></div>
+      <div class='layer'><img src='assets/a74b9c85be39cdf194e9b04131c437354c9a5236.png' alt='婴儿床无婴儿' style='left:60px;top:325px;width:399px;height:560px;'></div>
+      <div class='layer'><img class='cradle-rock' src='assets/83e722b7b42b7397069cec3d7a0b8373f96d0c67.png' alt='妈妈抱婴儿身体' style='left:36px;top:296px;width:577px;height:691px;'></div>
+      <div class='layer'><img src='assets/507e158f8a0a1aba7464cedb277e32e22c2a98f9.png' alt='婴儿' style='left:477px;top:417px;width:150px;height:118px;'></div>
+      <div class='layer'><img src='assets/bde0438051d94f71b2a95c22fecbfa0146b81076.png' alt='爸爸奶粉身体' style='left:6px;top:562px;width:201px;height:373px;'></div>
+      <div class='layer'><img src='assets/54fcf0a5cf9c434fab361ba6b704a22660c2e16c.png' alt='奶粉桌子' style='left:-1px;top:847px;width:271px;height:200px;'></div>
+      <div class='layer'><img class='arrow-pulse' src='assets/544180fdfc1bdae6e7b74d19439f72ff7d3bb0da.png' alt='箭头' style='left:574px;top:15px;width:47px;height:47px;'></div>
+      <div class='layer'><img class='stir-motion' src='assets/0aed27590e49fdf6b593947e1dd048e2eba38917.png' alt='爸爸奶粉手部' style='left:59px;top:736px;width:151px;height:140px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/7d4be07059f7912a1aeb030691b6c05452a68079.png' alt='台灯光芒' style='left:213px;top:202px;width:102px;height:186px;'></div>
+      <div class='layer' id='card4' style='opacity:0'><img src='assets/a47bc1ad8b0abdb714813e2e3936abe0b2dbff27.png' alt='文字责任' style='left:71px;top:46px;width:193px;height:349px;'></div>
+      <div class='layer'><img src='assets/557a8c5de4e082da97ba8426a6c3005729c357f0.png' alt='被子' style='left:320px;top:520px;width:334px;height:476px;'></div>
+      <div class='scene-title'>画板4</div>
+    </div>
+
+    <!-- Scene 5: Exterior - Dawn (环卫工) -->
+    <div class='scene' id='scene-5'>
+      <div class='layer'><img src='assets/d098099b4929f956e013970e899e15148f3956c0.png' alt='白天背景' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/57c5f3cb5a09a2010a5e2d2766e77007235e18e6.png' alt='FsUwh2Tl' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer' id='finger5'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:251px;top:407px;width:46px;height:65px;'></div>
+      <div class='layer' id='radio5' style='opacity:0'><img src='assets/62df4b0baa5ea372e0c7a8fe91b165b6b65416a3.png' alt='收音机' style='left:72px;top:262px;width:277px;height:85px;'></div>
+      <div class='click-overlay' id='click5'></div>
+      <div class='scene-title'>画板5</div>
+    </div>
+
+    <!-- Scene 6: Interior - Entryway Dark (环卫工 暗态) -->
+    <div class='scene' id='scene-6'>
+      <div class='layer'><img src='assets/908b648babb819551b8f58930288db99e2143aec.png' alt='背景门口' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='arm-breath' src='assets/1ddf1b9b4c55e7ca7816718266099bc2d4b164e8.png' alt='左手' style='left:228px;top:443px;width:117px;height:234px;'></div>
+      <div class='layer'><img class='body-breath' src='assets/b2cdf751a8ffbb5d3031bff21d065afbb586c474.png' alt='人物' style='left:172px;top:282px;width:166px;height:684px;'></div>
+      <div class='layer'><img src='assets/a87941f7d0db732751c796b5d6e1057c0ef763ee.png' alt='日历' style='left:537px;top:668px;width:114px;height:318px;'></div>
+      <div class='layer'><img class='clothes-sway' src='assets/4d5bdc874b774ff7a955296cc793d03e0a8a168b.png' alt='衣服' style='left:451px;top:261px;width:90px;height:272px;'></div>
+      <div class='layer'><img class='arm-breath' src='assets/beabe969f989912004a4def7c41c4b085887ce47.png' alt='右手' style='left:190px;top:443px;width:130px;height:246px;'></div>
+      <div class='layer'><img class='plant-swing' src='assets/d3c3c69137b66f6854133620a89e9b8e7a88c27b.png' alt='植物1' style='left:475px;top:611px;width:42px;height:58px;'></div>
+      <div class='layer'><img class='plant-swing' src='assets/e412b417eb79ab313bdc01712394e2e2c39d6d33.png' alt='植物2' style='left:437px;top:624px;width:75px;height:48px;'></div>
+      <div class='layer hint-blink' id='hint6'><img src='assets/bf041d8c7902384ebd6e3b528a91731260398601.png' alt='点击' style='left:115px;top:221px;width:172px;height:122px;'></div>
+      <div class='click-overlay' id='click6'></div>
+      <div class='scene-title'>画板6</div>
+    </div>
+
+    <!-- Scene 7: Interior - Entryway Bright (环卫工 亮态) -->
+    <div class='scene' id='scene-7'>
+      <div class='layer'><img src='assets/33a719cb9806466a28911535364a2d63caecbae6.png' alt='打开门' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/a87941f7d0db732751c796b5d6e1057c0ef763ee.png' alt='日历' style='left:537px;top:668px;width:114px;height:318px;'></div>
+      <div class='layer'><img src='assets/4d5bdc874b774ff7a955296cc793d03e0a8a168b.png' alt='衣服' style='left:451px;top:261px;width:90px;height:272px;'></div>
+      <div class='layer'><img src='assets/d3c3c69137b66f6854133620a89e9b8e7a88c27b.png' alt='植物1' style='left:475px;top:611px;width:42px;height:58px;'></div>
+      <div class='layer'><img src='assets/e412b417eb79ab313bdc01712394e2e2c39d6d33.png' alt='植物2' style='left:437px;top:624px;width:75px;height:48px;'></div>
+      <div class='layer'><img src='assets/f1a6411af1b0bddf49e1f72d783bfb70ac3fb5ba.png' alt='清洁工' style='left:180px;top:323px;width:205px;height:697px;'></div>
+      <div class='layer' id='card7' style='opacity:0'><img src='assets/f2c7e4a9f518d65c2ef2a1d349bc827d8664bb7c.png' alt='责任文字' style='left:42px;top:39px;width:194px;height:347px;'></div>
+      <div class='layer'><img src='assets/28bb4c743032b75d36565a50d8b1f7ca7ae4746a.png' alt='妇女' style='left:-1px;top:484px;width:222px;height:552px;'></div>
+      <div class='layer'><img class='hand-extend' src='assets/8b9989d81bdee5f6bfb2c9b01eb663697d3b0c1f.png' alt='妇女右手' style='left:33px;top:607px;width:223px;height:160px;'></div>
+      <div class='layer'><img class='hand-extend' src='assets/7f2319f31d2303c58de5f8a2869a5b300122b6b2.png' alt='清洁工左手' style='left:224px;top:462px;width:130px;height:246px;'></div>
+      <div class='layer'><img class='arrow-pulse' src='assets/544180fdfc1bdae6e7b74d19439f72ff7d3bb0da.png' alt='箭头' style='left:574px;top:15px;width:47px;height:47px;'></div>
+      <div class='scene-title'>画板7</div>
+    </div>
+
+    <!-- Scene 8: Exterior - Morning (军人) -->
+    <div class='scene' id='scene-8'>
+      <div class='layer'><img src='assets/b3786ad81e7c76f50f5da043015d79dd47526b45.png' alt='白天8点' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/c9b124dc148d9272211e0dba40e4b0f0a4458b78.png' alt='FsUwh2Tl' style='left:0px;top:122px;width:640px;height:918px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer' id='finger8'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:416px;top:462px;width:46px;height:65px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer' id='bubble8' style='opacity:0'><img src='assets/e539379d983892c2798cf92f9e610bd85f83a7d7.png' alt='来电话了' style='left:251px;top:300px;width:241px;height:62px;'></div>
+      <div class='layer'><img src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3-click' style='left:347px;top:364px;width:69px;height:130px;opacity:0;'></div>
+      <div class='click-overlay' id='click8'></div>
+      <div class='scene-title'>画板8</div>
+    </div>
+
+    <!-- Scene 9: Interior - Living Room Dark (军人 暗态) -->
+    <div class='scene' id='scene-9'>
+      <div class='layer'><img src='assets/31378d8dc087082b7d9d64f1bcca7fc8af2517a5.png' alt='房间' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/fe839513b80646c36120ef96a6c9ec55684f0d47.png' alt='电视光' style='left:388px;top:630px;width:260px;height:357px;'></div>
+      <div class='layer'><img src='assets/6b9305707ae6f89f43b0a66f0dfa61c5aabbe95d.png' alt='狗' style='left:338px;top:614px;width:179px;height:138px;'></div>
+      <div class='layer'><img src='assets/c0efcf3a525b0c287443bf132ead5f1f85e13f03.png' alt='女主人' style='left:161px;top:34px;width:389px;height:486px;'></div>
+      <div class='layer'><img class='phone-shake' id='phone9img' src='assets/31e4063fbdb220df4005db57dd97ff2585c18e37.png' alt='手机' style='left:233px;top:532px;width:82px;height:51px;'></div>
+      <div class='layer'><img class='toy-push' src='assets/455eb3fb06fdebbf85e55d641c42103fb28da0f8.png' alt='小孩手' style='left:162px;top:814px;width:119px;height:101px;'></div>
+      <div class='layer hint-blink' id='hint9'><img src='assets/bf041d8c7902384ebd6e3b528a91731260398601.png' alt='点击' style='left:265px;top:402px;width:172px;height:122px;'></div>
+      <div class='click-overlay' id='click9'></div>
+      <div class='scene-title'>画板9</div>
+    </div>
+
+    <!-- Scene 10: Interior - Living Room Video Call (军人 亮态) -->
+    <div class='scene' id='scene-10'>
+      <div class='layer'><img src='assets/b97bf7111796f8e483de24493cb67087d0ac7ca9.png' alt='背景' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='salute' src='assets/063415ead7710622bb79c9b7e2828dbf537e9b0c.png' alt='小孩右手' style='left:305px;top:226px;width:70px;height:69px;'></div>
+      <div class='layer'><img src='assets/24d0d9f933d874839fce16dc1cd09aecdbaf4045.png' alt='国旗' style='left:248px;top:605px;width:459px;height:246px;'></div>
+      <div class='layer'><img class='phone-hold' src='assets/d3637c59f88e7c17243a04826ee0cad46a76e05e.png' alt='妈妈右手' style='left:327px;top:110px;width:83px;height:135px;'></div>
+      <div class='layer' id='card10' style='opacity:0'><img src='assets/96c829184af7f2d0201e2529caf2627668d3d10a.png' alt='文字' style='left:397px;top:559px;width:199px;height:358px;'></div>
+      <div class='layer'><img src='assets/82a378273a606ceb100d990171b4eb1c0ae38d27.png' alt='电话' style='left:272px;top:614px;width:71px;height:71px;'></div>
+      <div class='layer'><img class='arrow-pulse' src='assets/544180fdfc1bdae6e7b74d19439f72ff7d3bb0da.png' alt='箭头' style='left:563px;top:46px;width:47px;height:47px;'></div>
+      <div class='scene-title'>画板10</div>
+    </div>
+
+    <!-- Scene 11: Exterior - Noon (探亲) -->
+    <div class='scene' id='scene-11'>
+      <div class='layer'><img src='assets/c975e0ebc3a43ce82f28e4fe2262000ee1f38fa2.png' alt='白天12点' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/c9b124dc148d9272211e0dba40e4b0f0a4458b78.png' alt='FsUwh2Tl' style='left:0px;top:122px;width:640px;height:918px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4' style='left:467px;top:365px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer' id='bubble11' style='opacity:0'><img src='assets/08cc3fffe26164597f62290eea48cf6c462e19a3.png' alt='回来了' style='left:390px;top:303px;width:223px;height:62px;'></div>
+      <div class='layer' id='finger11'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:479px;top:407px;width:46px;height:65px;'></div>
+      <div class='layer'><img src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4-click' style='left:467px;top:365px;width:69px;height:130px;opacity:0;'></div>
+      <div class='click-overlay' id='click11'></div>
+      <div class='scene-title'>画板11</div>
+    </div>
+
+    <!-- Scene 12: Interior - Door Dark (探亲 暗态) -->
+    <div class='scene' id='scene-12'>
+      <div class='layer'><img src='assets/93d9dbfe98959bd017000da9f3936ff218d85edf.png' alt='门' style='left:4px;top:0px;width:640px;height:1029px;'></div>
+      <div class='layer'><img src='assets/cc0a73638413b7cb464b40ab191e2f26a7b46ffa.png' alt='包' style='left:22px;top:751px;width:66px;height:188px;'></div>
+      <div class='layer'><img src='assets/fa4522a4b976d37b0730742e96aca67f3d3a6e6f.png' alt='辫子右' style='left:350px;top:550px;width:51px;height:109px;'></div>
+      <div class='layer'><img src='assets/6920775af553d22b9b54a0afac4d917ec8177f1c.png' alt='辫子左' style='left:239px;top:567px;width:43px;height:107px;'></div>
+      <div class='layer'><img src='assets/b212249ad425dbc107c14c991372484b78b109f4.png' alt='父母' style='left:32px;top:367px;width:562px;height:683px;'></div>
+      <div class='layer'><img src='assets/f1e2ccccce25d631824042d3a8a28496c80ff273.png' alt='裤子' style='left:267px;top:939px;width:95px;height:136px;'></div>
+      <div class='layer'><img src='assets/5b2a88b37143861276c274cff7125feeddb520f1.png' alt='裙子' style='left:231px;top:851px;width:178px;height:125px;'></div>
+      <div class='layer'><img src='assets/da41d704d64bbc3afa5375be865e5137e76aaed2.png' alt='女孩身体' style='left:221px;top:544px;width:192px;height:347px;'></div>
+      <div class='layer hint-blink' id='hint12'><img src='assets/bf041d8c7902384ebd6e3b528a91731260398601.png' alt='点击 拷贝' style='left:298px;top:120px;width:172px;height:122px;'></div>
+      <div class='click-overlay' id='click12'></div>
+      <div class='scene-title'>画板12</div>
+    </div>
+
+    <!-- Scene 13: Interior - Door Open (探亲 亮态) -->
+    <div class='scene' id='scene-13'>
+      <div class='layer'><img src='assets/3df3490819f6c1f9271f6fa104ecc00a94e87414.png' alt='打开门' style='left:0px;top:17px;width:640px;height:1029px;'></div>
+      <div class='layer'><img src='assets/cc0a73638413b7cb464b40ab191e2f26a7b46ffa.png' alt='包 拷贝' style='left:31px;top:759px;width:66px;height:188px;'></div>
+      <div class='layer'><img src='assets/c9a1b1853bfa441255f98904c2fd0c9182bfb5a8.png' alt='爷爷左手' style='left:143px;top:367px;width:94px;height:186px;'></div>
+      <div class='layer'><img src='assets/b212249ad425dbc107c14c991372484b78b109f4.png' alt='父母 拷贝' style='left:45px;top:376px;width:562px;height:683px;'></div>
+      <div class='layer'><img src='assets/7db77188575522fe341e6556974c10c0741477aa.png' alt='爷爷' style='left:207px;top:232px;width:206px;height:631px;'></div>
+      <div class='layer'><img src='assets/e5e6f2d28778f6f66d8974c9ec5a5aae8930fa67.png' alt='左手' style='left:229px;top:595px;width:48px;height:174px;'></div>
+      <div class='layer'><img src='assets/f1e2ccccce25d631824042d3a8a28496c80ff273.png' alt='裤子 拷贝' style='left:278px;top:939px;width:95px;height:136px;'></div>
+      <div class='layer'><img src='assets/5b2a88b37143861276c274cff7125feeddb520f1.png' alt='裙子 拷贝' style='left:242px;top:851px;width:178px;height:125px;'></div>
+      <div class='layer' id='card13' style='opacity:0'><img src='assets/0f9ddd8a4f2905cd17e168e654ba5a630137a157.png' alt='文字' style='left:410px;top:643px;width:202px;height:364px;'></div>
+      <div class='layer'><img src='assets/9d2a060c31d325bf953d3a51cb8c45bde1b90ed1.png' alt='右手' style='left:373px;top:587px;width:51px;height:196px;'></div>
+      <div class='layer'><img src='assets/b4accac9612afecebf3c8ec39c15cd50bf2d1d8d.png' alt='女孩' style='left:253px;top:578px;width:150px;height:336px;'></div>
+      <div class='layer'><img class='arrow-pulse' src='assets/544180fdfc1bdae6e7b74d19439f72ff7d3bb0da.png' alt='箭头' style='left:553px;top:33px;width:59px;height:59px;'></div>
+      <div class='scene-title'>画板13</div>
+    </div>
+
+    <!-- Scene 14: Exterior - Rain (外卖) -->
+    <div class='scene' id='scene-14'>
+      <div class='layer'><img src='assets/fa0ec3e98ec54384587eed69a00618a005a64368.png' alt='傍晚' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/c9b124dc148d9272211e0dba40e4b0f0a4458b78.png' alt='FsUwh2Tl' style='left:0px;top:122px;width:640px;height:918px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer' id='bubble14' style='opacity:0'><img src='assets/a2996b3e284d51100fb8d9ac5b1dcd6ceac92f3a.png' alt='外卖' style='left:270px;top:478px;width:241px;height:63px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4' style='left:467px;top:365px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/1b2b6db93fb6fd9ef651a4343642bef818451232.png' alt='index5' style='left:348px;top:533px;width:69px;height:131px;'></div>
+      <div class='layer' id='finger14'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:371px;top:590px;width:46px;height:65px;'></div>
+      <div class='layer'><img src='assets/1b2b6db93fb6fd9ef651a4343642bef818451232.png' alt='index5-click' style='left:348px;top:533px;width:69px;height:131px;opacity:0;'></div>
+      <div class='click-overlay' id='click14'></div>
+      <div class='scene-title'>画板14</div>
+    </div>
+
+    <!-- Scene 15: Interior - Delivery Dark (外卖 暗态) -->
+    <div class='scene' id='scene-15'>
+      <div class='layer'><img src='assets/a29a7b20c79825f70393a6b4c246b5d0cb450bd7.png' alt='背景' style='left:-9px;top:-20px;width:653px;height:1060px;'></div>
+      <div class='layer'><img src='assets/1a02055dfe691904c5c28277cc0c278b7e7673ff.png' alt='污水' style='left:261px;top:902px;width:246px;height:76px;'></div>
+      <div class='layer'><img src='assets/13e92dcc2f217fa64aafcde89ed9c43ad8f81a23.png' alt='植物1' style='left:79px;top:46px;width:82px;height:138px;'></div>
+      <div class='layer'><img src='assets/7dc200303114c87f837e63affdcbb687fc8ecba2.png' alt='植物2' style='left:157px;top:52px;width:76px;height:127px;'></div>
+      <div class='layer hint-blink' id='hint15'><img src='assets/bf041d8c7902384ebd6e3b528a91731260398601.png' alt='点击 拷贝' style='left:413px;top:505px;width:172px;height:122px;'></div>
+      <div class='click-overlay' id='click15'></div>
+      <div class='layer'><img src='assets/ed08ce31bdc697de87af0c5460aa6e060dfbf9d7.png' alt='外卖小哥' style='left:274px;top:102px;width:207px;height:840px;'></div>
+      <div class='layer'><img src='assets/c2e39a7bdc6accad07b12f46964b499d198de4f0.png' alt='包' style='left:275px;top:502px;width:152px;height:199px;'></div>
+      <div class='layer'><img src='assets/ffd696ec601f62d930f4a641b18ae607228645fd.png' alt='箱子' style='left:246px;top:384px;width:148px;height:135px;'></div>
+      <div class='layer'><img src='assets/e403d62bb5afa446c3c2cc67dc223e60aa11a989.png' alt='左手' style='left:300px;top:322px;width:183px;height:216px;'></div>
+      <div class='layer'><img src='assets/e519a5c7ea2e4e3fb564d0b512f3c815a3b0982b.png' alt='女人' style='left:-5px;top:305px;width:412px;height:937px;'></div>
+      <div class='scene-title'>画板15</div>
+    </div>
+
+    <!-- Scene 16: Interior - Delivery Bright (外卖 亮态) -->
+    <div class='scene' id='scene-16'>
+      <div class='layer'><img src='assets/a29a7b20c79825f70393a6b4c246b5d0cb450bd7.png' alt='背景' style='left:-9px;top:-20px;width:653px;height:1060px;'></div>
+      <div class='layer'><img src='assets/1a02055dfe691904c5c28277cc0c278b7e7673ff.png' alt='污水' style='left:261px;top:902px;width:246px;height:76px;'></div>
+      <div class='layer'><img src='assets/13e92dcc2f217fa64aafcde89ed9c43ad8f81a23.png' alt='植物1' style='left:79px;top:46px;width:82px;height:138px;'></div>
+      <div class='layer'><img src='assets/7dc200303114c87f837e63affdcbb687fc8ecba2.png' alt='植物2' style='left:157px;top:52px;width:76px;height:127px;'></div>
+      <div class='layer'><img src='assets/ed08ce31bdc697de87af0c5460aa6e060dfbf9d7.png' alt='外卖小哥' style='left:274px;top:102px;width:207px;height:840px;'></div>
+      <div class='layer'><img src='assets/ffd696ec601f62d930f4a641b18ae607228645fd.png' alt='箱子' style='left:502px;top:214px;width:148px;height:135px;'></div>
+      <div class='layer'><img src='assets/d1123c7d7959da55a98ad596161abac9cded8ca9.png' alt='女人身体' style='left:13px;top:305px;width:206px;height:937px;'></div>
+      <div class='layer'><img src='assets/831d40bef20b6580c865f0a68880c65ec8946ec3.png' alt='水杯手' style='left:148px;top:502px;width:274px;height:163px;'></div>
+      <div class='layer'><img src='assets/c7392196fe38851099b1c0bbefa67e1358f1a55e.png' alt='毛巾手' style='left:349px;top:231px;width:126px;height:204px;'></div>
+      <div class='layer'><img src='assets/c2e39a7bdc6accad07b12f46964b499d198de4f0.png' alt='包 拷贝 2' style='left:561px;top:296px;width:152px;height:199px;'></div>
+      <div class='layer' id='card16' style='opacity:0'><img src='assets/7d03a2447288c09beef169aa0050bd99923f49a5.png' alt='文字' style='left:404px;top:635px;width:205px;height:368px;'></div>
+      <div class='layer'><img class='arrow-pulse' src='assets/544180fdfc1bdae6e7b74d19439f72ff7d3bb0da.png' alt='箭头' style='left:553px;top:44px;width:47px;height:47px;'></div>
+      <div class='scene-title'>画板16</div>
+    </div>
+
+    <!-- Scene 17: Exterior - Night Rain (高考生/窗户保留) -->
+    <div class='scene' id='scene-17'>
+      <div class='layer'><img src='assets/cd711c241692b1dc9380b432d6e43e3eac75c3d5.png' alt='夜晚' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/c9b124dc148d9272211e0dba40e4b0f0a4458b78.png' alt='FsUwh2Tl' style='left:0px;top:122px;width:640px;height:918px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4' style='left:467px;top:365px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/1b2b6db93fb6fd9ef651a4343642bef818451232.png' alt='index5' style='left:348px;top:533px;width:69px;height:131px;'></div>
+      <div class='layer' id='bubble17' style='opacity:0'><img src='assets/3f6220d370d7b201edbde3f223a6e3734e051c6e.png' alt='滴答' style='left:140px;top:650px;width:241px;height:62px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/54a7655869810dd399e88a38295e6bce719b5b7c.png' alt='index6' style='left:227px;top:706px;width:70px;height:131px;'></div>
+      <div class='layer' id='finger17'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:393px;top:632px;width:46px;height:65px;'></div>
+      <div class='click-overlay' id='click17'></div>
+      <div class='scene-title'>画板17</div>
+    </div>
+
+    <!-- Scene 18: Exterior - Late Night (医生/窗户保留) -->
+    <div class='scene' id='scene-18'>
+      <div class='layer'><img src='assets/19f58c4b8a9f11a79db442a95c74ef88e01b71c8.png' alt='深夜' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/57c5f3cb5a09a2010a5e2d2766e77007235e18e6.png' alt='FsUwh2Tl' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4' style='left:467px;top:365px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/1b2b6db93fb6fd9ef651a4343642bef818451232.png' alt='index5' style='left:348px;top:533px;width:69px;height:131px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/77799d2501a724043acf01bf6857934f0a6f1dfa.png' alt='index7' style='left:225px;top:878px;width:69px;height:131px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/54a7655869810dd399e88a38295e6bce719b5b7c.png' alt='index6' style='left:227px;top:706px;width:70px;height:131px;'></div>
+      <div class='layer' id='bubble18' style='opacity:0'><img src='assets/c002c4e65a2e8a590824aac8a14b65c5c0a763f6.png' alt='嗡嗡嗡' style='left:166px;top:817px;width:187px;height:62px;'></div>
+      <div class='layer' id='finger18'><img class='finger-anim' src='assets/d558a3f58726616f74bc12af9bb035d516729552.png' alt='手指 拷贝' style='left:393px;top:632px;width:46px;height:65px;'></div>
+      <div class='click-overlay' id='click18'></div>
+      <div class='scene-title'>画板20</div>
+    </div>
+
+    <!-- Ending Scene -->
+    <div class='scene' id='scene-ending'>
+      <div class='layer'><img src='assets/19f58c4b8a9f11a79db442a95c74ef88e01b71c8.png' alt='深夜' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img src='assets/57c5f3cb5a09a2010a5e2d2766e77007235e18e6.png' alt='FsUwh2Tl' style='left:0px;top:0px;width:640px;height:1040px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/a0d76fce40aac1cad59e1006fa80eeabd5671d2f.png' alt='index2' style='left:228px;top:362px;width:67px;height:132px;'></div>
+      <div class='layer'><img src='assets/0e06fa318beaa6172c60c88a6a80399383e30bd4.png' alt='云' style='left:25px;top:39px;width:640px;height:83px;'></div>
+      <div class='layer'><img class='glow-pulse' src='assets/d24b43f22317210a4f81587311b011fbbbc8b3d6.png' alt='光芒' style='left:525px;top:758px;width:82px;height:82px;'></div>
+      <div class='layer'><img src='assets/dae3cfef282641227cd26f910165f9e3b8e35b13.png' alt='路灯' style='left:517px;top:748px;width:123px;height:292px;'></div>
+      <div class='layer'><img src='assets/e79a2439e01e20196ef2a55671f34fde366b159c.png' alt='窗台装饰' style='left:90px;top:456px;width:465px;height:557px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/19d90fad1f9185e2be97d2b0a2f6004cde7f6469.png' alt='index' style='left:110px;top:364px;width:67px;height:108px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/245d397bbcb2b2047aadcc53d7344f505374592e.png' alt='index4' style='left:467px;top:365px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/34b2d6b05d89cd4b0108af336a3daee35d1a25f7.png' alt='index3' style='left:347px;top:364px;width:69px;height:130px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/1b2b6db93fb6fd9ef651a4343642bef818451232.png' alt='index5' style='left:348px;top:533px;width:69px;height:131px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/77799d2501a724043acf01bf6857934f0a6f1dfa.png' alt='index7' style='left:225px;top:878px;width:69px;height:131px;'></div>
+      <div class='layer'><img class='window-glow' src='assets/54a7655869810dd399e88a38295e6bce719b5b7c.png' alt='index6' style='left:227px;top:706px;width:70px;height:131px;'></div>
+      <div class="ending-overlay">
+        <div class="ending-title">7号楼</div>
+        <div class="ending-subtitle">每一盏灯，都是一个平凡人的责任</div>
+        <button class="poster-btn" id="posterBtn">生成海报</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Audio Elements -->
+  <audio id="audio-cry" src="哇哇哭声.mp3" preload="auto" loop></audio>
+  <audio id="audio-opera" src="京剧音频.mp3" preload="auto" loop></audio>
+  <audio id="audio-phone" src="苹果来电.mp3" preload="auto" loop></audio>
+
+  <!-- Poster Result -->
+  <div class="poster-result" id="posterResult">
+    <canvas id="posterCanvas" class="poster-canvas"></canvas>
+    <div class="poster-actions">
+      <div class="poster-action-btn" id="posterSave">长按保存海报</div>
+      <div class="poster-action-btn" id="posterClose">关闭</div>
+    </div>
+  </div>
+
+<script>
+// ============ STATE ============
+let currentScene = 1;
+let interacted = {};
+const TOTAL_SCENES = 18;
+
+// ============ AUDIO ============
+function stopAllAudio() {
+  ['audio-cry', 'audio-opera', 'audio-phone'].forEach(id => {
+    const a = document.getElementById(id);
+    if (a) { a.pause(); a.currentTime = 0; }
+  });
+}
+function unlockAudio() {
+  ['audio-cry', 'audio-opera', 'audio-phone'].forEach(id => {
+    const a = document.getElementById(id);
+    if (a) { a.play().then(() => a.pause()).catch(() => {}); }
+  });
+}
+function playAudio(id) {
+  const a = document.getElementById(id);
+  if (a) a.play().catch(() => {});
+}
+function stopAudio(id) {
+  const a = document.getElementById(id);
+  if (a) { a.pause(); a.currentTime = 0; }
+}
+
+// Scene flow: each scene leads to the next
+// Special: interior dark -> interior bright (skip one)
+// 1(Cover) -> 2(Ext-Night) -> 3(Int-Dark) -> 4(Int-Bright) -> 5(Ext-Dawn) ->
+// 6(Int-Dark) -> 7(Int-Bright) -> 8(Ext-Morning) -> 9(Int-Dark) -> 10(Int-Bright) ->
+// 11(Ext-Noon) -> 12(Int-Dark) -> 13(Int-Bright) -> 14(Ext-Rain) ->
+// 15(Int-Dark) -> 16(Int-Bright) -> 17(Ext-NightRain) -> 18(Ext-LateNight) -> ending
+
+// ============ SCENE MANAGEMENT ============
+function showScene(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('scene-' + id);
+  if (el) {
+    el.classList.add('active');
+    currentScene = id;
+    updateProgress();
+    onSceneEnter(id);
+  }
+}
+
+function updateProgress() {
+  const pct = ((currentScene - 1) / (TOTAL_SCENES + 1)) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+// ============ SCENE ENTER HANDLERS ============
+function onSceneEnter(id) {
+  switch(id) {
+    case 1: initCover(); break;
+    case 2: initExtNight(); break;
+    case 3: initBedroomDark(); break;
+    case 4: initBedroomBright(); break;
+    case 5: initExtDawn(); break;
+    case 6: initEntrywayDark(); break;
+    case 7: initEntrywayBright(); break;
+    case 8: initExtMorning(); break;
+    case 9: initLivingRoomDark(); break;
+    case 10: initLivingRoomBright(); break;
+    case 11: initExtNoon(); break;
+    case 12: initDoorDark(); break;
+    case 13: initDoorBright(); break;
+    case 14: initExtRain(); break;
+    case 15: initDeliveryDark(); break;
+    case 16: initDeliveryBright(); break;
+    case 17: initExtNightRain(); break;
+    case 18: initExtLateNight(); break;
+    case 'ending': initEnding(); break;
+  }
+}
+
+// ============ COVER (Scene 1) ============
+function initCover() {
+  const overlay = document.getElementById('click1');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[1]) return;
+      interacted[1] = true;
+      unlockAudio();
+      overlay.classList.add('hidden');
+      // Trees open left & right simultaneously
+      document.getElementById('tree1').classList.add('open');
+      document.getElementById('tree2').classList.add('open');
+      // Black mask fades
+      document.getElementById('coverMask').classList.add('fade');
+      // Wait then go to first exterior
+      setTimeout(() => showScene(2), 1800);
+    };
+  }
+}
+
+// ============ EXTERIOR - NIGHT (Scene 2) ============
+function initExtNight() {
+  // Play baby cry
+  playAudio('audio-cry');
+
+  // Show bubble with animation
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble1');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  // Click anywhere to enter bedroom
+  const overlay = document.getElementById('click2');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[2]) return;
+      interacted[2] = true;
+      overlay.classList.add('hidden');
+      showScene(3);
+    };
+  }
+}
+
+// ============ BEDROOM DARK (Scene 3) ============
+function initBedroomDark() {
+  const overlay = document.getElementById('click3');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[3]) return;
+      interacted[3] = true;
+      overlay.classList.add('hidden');
+      // Fade mask overlay
+      const mask = document.getElementById('mask3');
+      if (mask) mask.classList.add('fade');
+      // Hide click hint
+      const hint = document.getElementById('hint3');
+      if (hint) hint.style.opacity = '0';
+      // Transition to bright bedroom after mask fades
+      setTimeout(() => showScene(4), 1000);
+    };
+  }
+}
+
+// ============ BEDROOM BRIGHT (Scene 4) ============
+function initBedroomBright() {
+  // Stop baby cry at end of scene 3
+  stopAudio('audio-cry');
+
+  // Show responsibility card from right side
+  setTimeout(() => {
+    const card = document.getElementById('card4');
+    if (card) { card.style.opacity = '1'; card.classList.add('card-slide-right'); }
+  }, 600);
+
+  // Auto exit after card shown
+  setTimeout(() => showScene(5), 3500);
+}
+
+// ============ EXTERIOR - DAWN (Scene 5) ============
+function initExtDawn() {
+  // Play opera
+  playAudio('audio-opera');
+
+  setTimeout(() => {
+    const radio = document.getElementById('radio5');
+    if (radio) radio.style.opacity = '1';
+  }, 400);
+
+  const overlay = document.getElementById('click5');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[5]) return;
+      interacted[5] = true;
+      overlay.classList.add('hidden');
+      showScene(6);
+    };
+  }
+}
+
+// ============ ENTRYWAY DARK (Scene 6) ============
+function initEntrywayDark() {
+  const overlay = document.getElementById('click6');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[6]) return;
+      interacted[6] = true;
+      overlay.classList.add('hidden');
+      const hint = document.getElementById('hint6');
+      if (hint) hint.style.opacity = '0';
+      setTimeout(() => showScene(7), 300);
+    };
+  }
+}
+
+// ============ ENTRYWAY BRIGHT (Scene 7) ============
+function initEntrywayBright() {
+  // Show responsibility card from LEFT side (环卫工特殊)
+  setTimeout(() => {
+    const card = document.getElementById('card7');
+    if (card) { card.style.opacity = '1'; card.classList.add('card-slide-left'); }
+  }, 600);
+
+  // Auto exit
+  setTimeout(() => showScene(8), 3500);
+}
+
+// ============ EXTERIOR - MORNING (Scene 8) ============
+function initExtMorning() {
+  // Stop opera at end of scene 7
+  stopAudio('audio-opera');
+  // Play phone ring
+  playAudio('audio-phone');
+
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble8');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  const overlay = document.getElementById('click8');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[8]) return;
+      interacted[8] = true;
+      overlay.classList.add('hidden');
+      showScene(9);
+    };
+  }
+}
+
+// ============ LIVING ROOM DARK (Scene 9) ============
+function initLivingRoomDark() {
+  const overlay = document.getElementById('click9');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[9]) return;
+      interacted[9] = true;
+      overlay.classList.add('hidden');
+      const phone = document.getElementById('phone9img');
+      if (phone) phone.classList.remove('phone-shake');
+      const hint = document.getElementById('hint9');
+      if (hint) hint.style.opacity = '0';
+      setTimeout(() => showScene(10), 300);
+    };
+  }
+}
+
+// ============ LIVING ROOM BRIGHT - VIDEO CALL (Scene 10) ============
+function initLivingRoomBright() {
+  // Stop phone ring at end of scene 9
+  stopAudio('audio-phone');
+
+  // Show responsibility card from right side
+  setTimeout(() => {
+    const card = document.getElementById('card10');
+    if (card) { card.style.opacity = '1'; card.classList.add('card-slide-right'); }
+  }, 600);
+
+  // Auto exit
+  setTimeout(() => showScene(11), 3500);
+}
+
+// ============ EXTERIOR - NOON (Scene 11) ============
+function initExtNoon() {
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble11');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  const overlay = document.getElementById('click11');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[11]) return;
+      interacted[11] = true;
+      overlay.classList.add('hidden');
+      showScene(12);
+    };
+  }
+}
+
+// ============ DOOR DARK (Scene 12) ============
+function initDoorDark() {
+  const overlay = document.getElementById('click12');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[12]) return;
+      interacted[12] = true;
+      overlay.classList.add('hidden');
+      const hint = document.getElementById('hint12');
+      if (hint) hint.style.opacity = '0';
+      setTimeout(() => showScene(13), 300);
+    };
+  }
+}
+
+// ============ DOOR BRIGHT - OPEN (Scene 13) ============
+function initDoorBright() {
+  // Show responsibility card from right side
+  setTimeout(() => {
+    const card = document.getElementById('card13');
+    if (card) { card.style.opacity = '1'; card.classList.add('card-slide-right'); }
+  }, 600);
+
+  // Auto exit
+  setTimeout(() => showScene(14), 3500);
+}
+
+// ============ EXTERIOR - RAIN (Scene 14) ============
+function initExtRain() {
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble14');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  const overlay = document.getElementById('click14');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[14]) return;
+      interacted[14] = true;
+      overlay.classList.add('hidden');
+      showScene(15);
+    };
+  }
+}
+
+// ============ DELIVERY DARK (Scene 15) ============
+function initDeliveryDark() {
+  const overlay = document.getElementById('click15');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[15]) return;
+      interacted[15] = true;
+      overlay.classList.add('hidden');
+      const hint = document.getElementById('hint15');
+      if (hint) hint.style.opacity = '0';
+      setTimeout(() => showScene(16), 300);
+    };
+  }
+}
+
+// ============ DELIVERY BRIGHT (Scene 16) ============
+function initDeliveryBright() {
+  // Show responsibility card from right side
+  setTimeout(() => {
+    const card = document.getElementById('card16');
+    if (card) { card.style.opacity = '1'; card.classList.add('card-slide-right'); }
+  }, 600);
+
+  // Auto exit
+  setTimeout(() => showScene(17), 3500);
+}
+
+// ============ EXTERIOR - NIGHT RAIN (Scene 17) ============
+function initExtNightRain() {
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble17');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  const overlay = document.getElementById('click17');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[17]) return;
+      interacted[17] = true;
+      overlay.classList.add('hidden');
+      showScene(18);
+    };
+  }
+}
+
+// ============ EXTERIOR - LATE NIGHT (Scene 18) ============
+function initExtLateNight() {
+  setTimeout(() => {
+    const bubble = document.getElementById('bubble18');
+    if (bubble) { bubble.style.opacity = '1'; bubble.classList.add('bubble-appear'); }
+  }, 600);
+
+  const overlay = document.getElementById('click18');
+  if (overlay) {
+    overlay.onclick = function() {
+      if (interacted[18]) return;
+      interacted[18] = true;
+      overlay.classList.add('hidden');
+      showScene('ending');
+    };
+  }
+}
+
+// ============ ENDING ============
+function initEnding() {
+  document.getElementById('progressBar').style.width = '100%';
+  const btn = document.getElementById('posterBtn');
+  if (btn) {
+    btn.onclick = function() { generatePoster(); };
+  }
+}
+
+// ============ POSTER GENERATION ============
+function generatePoster() {
+  const canvas = document.getElementById('posterCanvas');
+  const w = 600, h = 900;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#0b1026');
+  grad.addColorStop(0.5, '#1a1a3e');
+  grad.addColorStop(1, '#2d1b3d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Stars
+  for (let i = 0; i < 60; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random()*w, Math.random()*h*0.5, Math.random()*1.5+0.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,' + (Math.random()*0.6+0.2) + ')';
+    ctx.fill();
+  }
+
+  // Building
+  const bx = w*0.2, by = h*0.3, bw = w*0.6, bh = h*0.45;
+  ctx.fillStyle = '#6b2a2a';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = '#8b3a3a';
+  ctx.fillRect(bx-4, by-8, bw+8, 12);
+
+  // Windows (all lit)
+  const winColors = [[true,true,true,true],[true,true,true,true],[true,true,true,true],[true,true,true,true]];
+  for (let f = 0; f < 4; f++) {
+    for (let wi = 0; wi < 4; wi++) {
+      const wx = bx + bw*0.08 + wi*(bw*0.22);
+      const wy = by + bh*0.08 + f*(bh*0.22);
+      const ww = bw*0.16, wh = bh*0.16;
+      if (winColors[f] && winColors[f][wi]) {
+        ctx.fillStyle = '#ffd866';
+        ctx.shadowColor = 'rgba(255,200,50,0.5)';
+        ctx.shadowBlur = 15;
+      } else {
+        ctx.fillStyle = '#1a1a2a';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fillRect(wx, wy, ww, wh);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Ground
+  ctx.fillStyle = '#2a2a1a';
+  ctx.fillRect(0, by+bh, w, h-by-bh);
+
+  // Title
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 48px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('7号楼', w/2, h*0.15);
+
+  // Subtitle
+  ctx.font = '20px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('平凡人的责任', w/2, h*0.2);
+
+  // Bottom text
+  ctx.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  const quotes = [
+    '每一盏灯，都是一个平凡人的责任',
+    '7号楼·平凡人的责任 1949-2019',
+    '责任在心，担当于行'
+  ];
+  quotes.forEach((q, i) => {
+    ctx.fillText(q, w/2, h*0.85 + i*24);
+  });
+
+  // Decorative line
+  ctx.strokeStyle = 'rgba(200,160,80,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(w*0.3, h*0.82);
+  ctx.lineTo(w*0.7, h*0.82);
+  ctx.stroke();
+
+  document.getElementById('posterResult').classList.add('show');
+}
+
+// Close poster
+document.getElementById('posterClose').onclick = function() {
+  document.getElementById('posterResult').classList.remove('show');
+};
+
+// ============ ADAPTIVE SCALING ============
+function adaptScale() {
+  const container = document.querySelector('.container');
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const designW = 640;
+  const designH = 1040;
+  const scaleW = vw / designW;
+  const scaleH = vh / designH;
+  const scale = Math.min(scaleW, scaleH);
+  container.style.transform = 'scale(' + scale + ')';
+  container.style.transformOrigin = 'top center';
+  container.style.width = designW + 'px';
+  container.style.height = designH + 'px';
+  // Center horizontally
+  const offsetX = (vw - designW * scale) / 2;
+  container.style.marginLeft = offsetX + 'px';
+}
+
+window.addEventListener('resize', adaptScale);
+adaptScale();
+
+// ============ INIT ============
+// Show first scene
+showScene(1);
+
+// Touch helper for mobile
+document.addEventListener('touchstart', function(){}, {passive: true});
+</script>
+</body>
+</html>
